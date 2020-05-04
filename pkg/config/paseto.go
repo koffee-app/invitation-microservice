@@ -22,6 +22,7 @@ func PasetoInit() {
 	pasetoPublic = ed25519.PublicKey(b)
 	b, _ = hex.DecodeString(key2)
 	pasetoPrivate = ed25519.PrivateKey(b)
+
 }
 
 // PrivateKeyParsed  Returns the parsed key for use in paseto

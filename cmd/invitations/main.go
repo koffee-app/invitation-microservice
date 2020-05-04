@@ -11,6 +11,7 @@ func main() {
 	// rabbit := rabbitmq.Initialize()
 	db := config.InitConfig()
 	repo := internals.Initialize(db)
+
 	// repo.CreateProfile(2, "gabivlj")
 	r := internals.InitController(repo)
 	if http.ListenAndServe(":4333", r) != nil {

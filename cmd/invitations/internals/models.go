@@ -28,7 +28,8 @@ const schemaAlbum = `
 	CREATE TABLE albums (
 		id integer,
 		artists text[],
-		name text
+		name text,
+		emailcreator text
 	)
 `
 
@@ -37,6 +38,7 @@ type Album struct {
 	ID                   uint32   `db:"id"`
 	Name                 string   `db:"name"`
 	ArtistsCollaborating []string `db:"artists"`
+	EmailCreator         string   `db:"emailcreator"`
 }
 
 type repo struct {
@@ -46,8 +48,8 @@ type repo struct {
 // Repository is the database interface
 type Repository interface {
 	CreateProfile(id uint32, name string) *Profile
-	NewInvitation(id uint32, albumID uint32) error
-	CreateAlbum(id uint32, artists []string) *Album
+	NewInvitation(id uint32, albumID uint32, email string) error
+	CreateAlbum(id uint32, artists []string, emailCreator string, name string) *Album
 	GetInvitations(id uint32) []Invitation
 	DeleteInvitation(id uint32, albumID uint32) ([]string, error)
 	AcceptInvitation(id uint32, albumID uint32) ([]string, error)
@@ -68,9 +70,9 @@ func Initialize(db *sqlx.DB) Repository {
 }
 
 // CreateAlbum creates a album in the database
-func (r *repo) CreateAlbum(id uint32, artists []string) *Album {
+func (r *repo) CreateAlbum(id uint32, artists []string, email string, name string) *Album {
 	tx := r.db.MustBegin()
-	row := tx.QueryRowx("INSERT INTO albums (id, artists) VALUES ($1, $2) RETURNING id", id, pq.StringArray(artists))
+	row := tx.QueryRowx("INSERT INTO albums (id, artists, emailcreator, name) VALUES ($1, $2, $3, $4) RETURNING id", id, pq.StringArray(artists), email, name)
 	if row.Err() != nil {
 		fmt.Println("Error: " + row.Err().Error())
 		return nil
@@ -118,10 +120,9 @@ func (r *repo) GetInvitations(id uint32) []Invitation {
 	return invs
 }
 
-func (r *repo) NewInvitation(id uint32, albumID uint32) error {
+func (r *repo) NewInvitation(id uint32, albumID uint32, email string) error {
 	tx := r.db.MustBegin()
-
-	row, err := tx.Exec("UPDATE profiles SET invitations=array_append(invitations, cast(albums.id as text)) FROM albums WHERE albums.id=$1 AND profiles.id=$2 AND NOT(cast($1 as text)=ANY(profiles.invitations)) AND ", id, albumID)
+	row, err := tx.Exec("UPDATE profiles SET invitations=array_append(invitations, cast(albums.id as text)) FROM albums WHERE albums.id=$1 AND profiles.userid=$2 AND NOT(cast($1 as text)=ANY(profiles.invitations)) AND albums.emailcreator=$3", albumID, id, email)
 	if err != nil {
 		return err
 	}
@@ -156,6 +157,7 @@ func (r *repo) DeleteInvitation(id uint32, albumID uint32) ([]string, error) {
 	return invParsed, nil
 }
 
+// Works
 func (r *repo) AcceptInvitation(id uint32, albumID uint32) ([]string, error) {
 	if _, err := r.DeleteInvitation(id, albumID); err != nil {
 		return nil, err

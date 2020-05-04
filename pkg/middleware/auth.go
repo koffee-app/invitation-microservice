@@ -19,16 +19,16 @@ func Authenticate(next httprouter.Handle, tokenService auth.Token) httprouter.Ha
 			w.Write(b)
 			return
 		}
-		_, _, id, _ := usr.Information()
-		ctx := context.WithValue(context.Background(), "user", id)
+		email, _, id, _ := usr.Information()
+		ctx := context.WithValue(context.Background(), "user", map[string]interface{}{"email": email, "id": id})
 		rcloned := r.Clone(ctx)
 		next(w, rcloned, p)
 	}
 }
 
 // UserID returns the loged user
-func UserID(r *http.Request) uint32 {
+func UserID(r *http.Request) (uint32, string) {
 	value := r.Context().Value("user")
-	val := value.(uint32)
-	return val
+	val := value.(map[string]interface{})
+	return val["id"].(uint32), val["email"].(string)
 }
